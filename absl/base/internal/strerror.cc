@@ -35,7 +35,7 @@ const char* StrErrorAdaptor(int errnum, char* buf, size_t buflen) {
   if (rc == 0 && strncmp(buf, "Unknown error", buflen) == 0) *buf = '\0';
   return buf;
 #else
-#if defined(__GLIBC__) || defined(__APPLE__)
+#if defined(__APPLE__) || (defined(__GLIBC__) && (3 > __GLIBC__) && (32 > __GLIBC_MINOR__))
   // Use the BSD sys_errlist API provided by GNU glibc and others to
   // avoid any need to copy the message into the local buffer first.
   if (0 <= errnum && errnum < sys_nerr) {
@@ -43,6 +43,16 @@ const char* StrErrorAdaptor(int errnum, char* buf, size_t buflen) {
       return p;
     }
   }
+#elif defined (__GLIBC__) && ((__GLIBC__ > 2) || (32 <= __GLIBC_MINOR__))
+  // Use the BSD sys_errlist API provided by GNU glibc and others to
+  // avoid any need to copy the message into the local buffer first.
+  if (0 <= errnum) {
+    if (const char* p = strerror(errnum)) {
+      return p;
+    }
+  }
+#else
+	throw "This system does not have an implementation for error handling.";
 #endif
   // The type of `ret` is platform-specific; both of these branches must compile
   // either way but only one will execute on any given platform:
